@@ -1,4 +1,10 @@
 <?php
+
+// TEMPORARY DEBUG — remove after fixing
+file_put_contents(__DIR__ . '/debug.log',
+    date('H:i:s') . " | HTTP: {$httpCode} | cURL err: {$curlError} | Response: {$apiResponse}\n",
+    FILE_APPEND
+);
 // ── CORS — allow Vercel frontend to call this backend ──
 header('Access-Control-Allow-Origin: https://perfume-backend-9653.onrender.com');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
