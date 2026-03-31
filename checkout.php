@@ -1,32 +1,31 @@
 <?php
 
-// ── CORS — allow Vercel frontend to call this backend ──
+// ── CORS ──
 header('Access-Control-Allow-Origin: https://www.theartisan.my');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
-// ────────────────────────────────────────────────────────
+
 /**
  * =====================================================
- * THE ARTISAN PARFUM — checkout.php
- * ToyyibPay Payment Gateway Integration
+ * THE ARTISAN PARFUM — checkout.php (v2 + Supabase)
  * =====================================================
  */
 
-/* =====================================================
-   CONFIG — INTERN KENA UBAH BAHAGIAN INI
-===================================================== */
 define('TP_SECRET_KEY',    getenv('TP_SECRET_KEY'));
 define('TP_CATEGORY_CODE', getenv('TP_CATEGORY_CODE'));
-define('TP_SANDBOX',       false);    // true = test mode | false = live production
+define('TP_SANDBOX',       false);
 define('STORE_NAME',       'The Artisan Parfum');
 define('STORE_EMAIL',      'info@theartisanparfum.my');
 define('WA_NUMBER',        '601159003985');
-define('BASE_URL',      'https://www.theartisan.my');       // frontend (for links to your store)
-define('BACKEND_URL',   'https://perfume-backend-9653.onrender.com'); // backend (for PHP callbacks)
+define('BASE_URL',         'https://www.theartisan.my');
+define('BACKEND_URL',      'https://perfume-backend-9653.onrender.com');
 define('MIN_ORDER_RM',     1);
 
-// ToyyibPay API endpoint
+// Supabase
+define('SB_URL', 'https://oyhtkqfmlwbkjbcfgqxm.supabase.co');
+define('SB_KEY', getenv('SB_SERVICE_KEY')); // Use service role key for backend writes
+
 define('TP_API_URL', TP_SANDBOX
     ? 'https://dev.toyyibpay.com/index.php/api/createBill'
     : 'https://toyyibpay.com/index.php/api/createBill'
@@ -36,21 +35,15 @@ define('TP_PAY_BASE', TP_SANDBOX
     : 'https://toyyibpay.com/'
 );
 
-/* =====================================================
-   SECURITY — Hanya terima POST request
-===================================================== */
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     die('Method Not Allowed');
 }
 
-// Basic security headers
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 
-/* =====================================================
-   HELPER FUNCTIONS
-===================================================== */
+/* ── HELPERS ── */
 function clean(string $value): string {
     return htmlspecialchars(strip_tags(trim($value)));
 }
@@ -62,51 +55,83 @@ function isValidPhone(string $phone): bool {
 
 function logOrder(string $message): void {
     $logFile = __DIR__ . '/orders.log';
-    $timestamp = date('Y-m-d H:i:s');
-    file_put_contents($logFile, "[{$timestamp}] {$message}\n", FILE_APPEND | LOCK_EX);
+    file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n", FILE_APPEND | LOCK_EX);
 }
 
 function generateOrderRef(string $phone): string {
-    $hash = strtoupper(substr(md5(time() . $phone . rand(1000, 9999)), 0, 8));
-    return 'TAP-' . $hash;
+    return 'TAP-' . strtoupper(substr(md5(time() . $phone . rand(1000, 9999)), 0, 8));
+}
+
+function saveOrderToSupabase(array $order): void {
+    $sbKey = SB_KEY;
+    if (!$sbKey) return; // Skip if no service key set
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL            => SB_URL . '/rest/v1/orders',
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($order),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_HTTPHEADER     => [
+            'apikey: ' . $sbKey,
+            'Authorization: Bearer ' . $sbKey,
+            'Content-Type: application/json',
+            'Prefer: return=minimal'
+        ]
+    ]);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
+function updateOrderBillCode(string $orderRef, string $billCode): void {
+    $sbKey = SB_KEY;
+    if (!$sbKey) return;
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL            => SB_URL . '/rest/v1/orders?order_ref=eq.' . urlencode($orderRef),
+        CURLOPT_CUSTOMREQUEST  => 'PATCH',
+        CURLOPT_POSTFIELDS     => json_encode(['bill_code' => $billCode]),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_HTTPHEADER     => [
+            'apikey: ' . $sbKey,
+            'Authorization: Bearer ' . $sbKey,
+            'Content-Type: application/json',
+            'Prefer: return=minimal'
+        ]
+    ]);
+    curl_exec($ch);
+    curl_close($ch);
 }
 
 function fallbackToWhatsApp(string $name, string $phone, string $address, string $items, int $total, string $note): void {
     $msg = "*Pesanan Baru — The Artisan Parfum*\n\n"
-         . "👤 *Nama:* {$name}\n"
-         . "📞 *Tel:* {$phone}\n"
-         . "📍 *Alamat:* {$address}\n\n"
-         . "*Item:*\n{$items}\n\n"
-         . "💰 *Jumlah: RM {$total}*\n\n"
-         . "📝 *Nota:* " . ($note ?: '-') . "\n\n"
-         . "_[Auto-fallback dari website]_";
-    $waUrl = 'https://wa.me/' . WA_NUMBER . '?text=' . urlencode($msg);
-    header('Location: ' . $waUrl);
+         . "👤 *Nama:* {$name}\n📞 *Tel:* {$phone}\n📍 *Alamat:* {$address}\n\n"
+         . "*Item:*\n{$items}\n\n💰 *Jumlah: RM {$total}*\n\n"
+         . "📝 *Nota:* " . ($note ?: '-') . "\n\n_[Auto-fallback dari website]_";
+    header('Location: https://wa.me/' . WA_NUMBER . '?text=' . urlencode($msg));
     exit;
 }
 
-/* =====================================================
-   STEP 1 — READ & SANITIZE POST DATA
-===================================================== */
-$name     = clean($_POST['name']     ?? '');
-$phone    = clean($_POST['phone']    ?? '');
-$email    = clean($_POST['email']    ?? '');
-$address  = clean($_POST['address']  ?? '');
-$note     = clean($_POST['note']     ?? '');
-$items    = clean($_POST['items']    ?? '');
-$itemsFmt = clean($_POST['itemsFormatted'] ?? $items);
+/* ── READ & SANITIZE ── */
+$name     = clean($_POST['name']             ?? '');
+$phone    = clean($_POST['phone']            ?? '');
+$email    = clean($_POST['email']            ?? '');
+$address  = clean($_POST['address']          ?? '');
+$note     = clean($_POST['note']             ?? '');
+$items    = clean($_POST['items']            ?? '');
+$itemsFmt = clean($_POST['itemsFormatted']   ?? $items);
 $total    = (int) filter_var($_POST['total'] ?? 0, FILTER_SANITIZE_NUMBER_INT);
 
-/* =====================================================
-   STEP 2 — SERVER-SIDE VALIDATION
-===================================================== */
+/* ── VALIDATE ── */
 $errors = [];
-
-if (strlen($name) < 3)     $errors[] = 'Nama tidak sah (minimum 3 huruf)';
+if (strlen($name) < 3)     $errors[] = 'Nama tidak sah';
 if (!isValidPhone($phone)) $errors[] = 'No. telefon tidak sah';
-if ($total < MIN_ORDER_RM) $errors[] = 'Jumlah pesanan tidak sah';
+if ($total < MIN_ORDER_RM) $errors[] = 'Jumlah tidak sah';
 if (empty($address))       $errors[] = 'Alamat diperlukan';
-if (empty($items))         $errors[] = 'Item pesanan tidak sah';
+if (empty($items))         $errors[] = 'Item tidak sah';
 
 if (!empty($errors)) {
     http_response_code(400);
@@ -114,25 +139,31 @@ if (!empty($errors)) {
     die(json_encode(['success' => false, 'errors' => $errors]));
 }
 
-/* =====================================================
-   STEP 3 — GENERATE ORDER ID & LOG
-===================================================== */
-$orderId   = generateOrderRef($phone);
-$totalSen  = $total * 100;
-$billLabel = 'Artisan — ' . $orderId;
-$billDesc  = "Pesanan #{$orderId}: " . substr($items, 0, 150);
-if ($note) $billDesc .= " | Nota: " . substr($note, 0, 40);
+/* ── GENERATE ORDER ── */
+$orderId  = generateOrderRef($phone);
+$totalSen = $total * 100;
 
 logOrder("NEW ORDER | {$orderId} | {$name} | {$phone} | RM {$total} | {$items}");
 
-/* =====================================================
-   STEP 4 — CALL TOYYIBPAY API
-===================================================== */
+// Save to Supabase
+saveOrderToSupabase([
+    'order_ref'  => $orderId,
+    'name'       => $name,
+    'phone'      => $phone,
+    'email'      => $email,
+    'address'    => $address,
+    'note'       => $note,
+    'items'      => $items,
+    'total'      => $total,
+    'pay_status' => 'pending'
+]);
+
+/* ── CALL TOYYIBPAY ── */
 $postFields = [
     'userSecretKey'           => TP_SECRET_KEY,
     'categoryCode'            => TP_CATEGORY_CODE,
-    'billName'                => $billLabel,
-    'billDescription'         => $billDesc,
+    'billName'                => 'Artisan — ' . $orderId,
+    'billDescription'         => "Pesanan #{$orderId}: " . substr($items, 0, 150) . ($note ? " | Nota: " . substr($note, 0, 40) : ''),
     'billPriceSetting'        => 1,
     'billPayorInfo'           => 1,
     'billAmount'              => $totalSen,
@@ -147,11 +178,8 @@ $postFields = [
     'billPaymentChannel'      => 0,
     'billContentEmail'        =>
         "Terima kasih kerana membeli di " . STORE_NAME . "!\n\n"
-        . "Pesanan: #{$orderId}\n"
-        . "Jumlah: RM {$total}\n\n"
-        . "Item:\n{$itemsFmt}\n\n"
-        . "Kami akan menghubungi anda dalam 24 jam untuk pengesahan penghantaran.\n\n"
-        . "WhatsApp: +60 " . substr(WA_NUMBER, 2),
+        . "Pesanan: #{$orderId}\nJumlah: RM {$total}\n\nItem:\n{$itemsFmt}\n\n"
+        . "Kami akan menghubungi anda dalam 24 jam.\n\nWhatsApp: +60 " . substr(WA_NUMBER, 2),
     'billChargeToCustomer'    => 1,
 ];
 
@@ -178,33 +206,22 @@ file_put_contents(__DIR__ . '/debug.log',
     FILE_APPEND
 );
 
-/* =====================================================
-   STEP 5 — PROCESS API RESPONSE
-===================================================== */
-if ($curlError) {
-    logOrder("CURL ERROR | {$orderId} | {$curlError}");
-    fallbackToWhatsApp($name, $phone, $address, $itemsFmt, $total, $note);
-}
-
-if ($httpCode !== 200) {
-    logOrder("API HTTP ERROR | {$orderId} | HTTP:{$httpCode}");
+if ($curlError || $httpCode !== 200) {
+    logOrder("API ERROR | {$orderId} | HTTP:{$httpCode} | {$curlError}");
     fallbackToWhatsApp($name, $phone, $address, $itemsFmt, $total, $note);
 }
 
 $result = json_decode($apiResponse, true);
-
 if (empty($result) || !isset($result[0]['BillCode'])) {
-    logOrder("API INVALID RESPONSE | {$orderId} | Response: " . substr($apiResponse, 0, 200));
+    logOrder("API INVALID RESPONSE | {$orderId} | " . substr($apiResponse, 0, 200));
     fallbackToWhatsApp($name, $phone, $address, $itemsFmt, $total, $note);
 }
 
-/* =====================================================
-   STEP 6 — REDIRECT TO TOYYIBPAY PAYMENT PAGE
-===================================================== */
 $billCode   = $result[0]['BillCode'];
 $paymentUrl = TP_PAY_BASE . $billCode;
 
-logOrder("BILL CREATED | {$orderId} | BillCode:{$billCode} | RM {$total} | Redirect: {$paymentUrl}");
+logOrder("BILL CREATED | {$orderId} | BillCode:{$billCode} | RM {$total}");
+updateOrderBillCode($orderId, $billCode);
 
 header('Location: ' . $paymentUrl);
 exit;
