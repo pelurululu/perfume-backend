@@ -3,8 +3,10 @@ FROM php:8.2-apache
 # Enable mod_rewrite (needed for clean URLs)
 RUN a2enmod rewrite
 
-# Install curl extension (used by checkout.php to call ToyyibPay API)
-RUN docker-php-ext-install curl
+# Install libcurl system library, then the PHP curl extension
+RUN apt-get update && apt-get install -y libcurl4-openssl-dev \
+    && docker-php-ext-install curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Allow .htaccess to override Apache config
 RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
