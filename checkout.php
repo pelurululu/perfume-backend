@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 ===================================================== */
 define('TP_SECRET_KEY',    getenv('TP_SECRET_KEY'));
 define('TP_CATEGORY_CODE', getenv('TP_CATEGORY_CODE'));
-define('TP_SANDBOX',       true);    // true = test mode | false = live production
+define('TP_SANDBOX',       false);    // true = test mode | false = live production
 define('STORE_NAME',       'The Artisan Parfum');
 define('STORE_EMAIL',      'info@theartisanparfum.my');
 define('WA_NUMBER',        '601159003985');
