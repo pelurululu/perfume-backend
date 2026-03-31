@@ -68,7 +68,7 @@ $waUrl = 'https://wa.me/601159003985?text=' . urlencode(
 ?>
 
 <div class="box">
-  <a href="index.html" class="logo">the artisan<span>.</span></a>
+  <a href="https://www.theartisan.my" class="logo">the artisan<span>.</span></a>
 
   <?php if ($isSuccess): ?>
     <div class="icon">✓</div>
@@ -98,7 +98,7 @@ $waUrl = 'https://wa.me/601159003985?text=' . urlencode(
     <a href="<?= $waUrl ?>" target="_blank" rel="noopener" class="btn-primary">
       💬 Hubungi via WhatsApp
     </a>
-    <a href="index.html" class="btn-secondary">
+    <a href="https://www.theartisan.my" class="btn-secondary">
       ← Kembali ke Kedai
     </a>
   </div>
