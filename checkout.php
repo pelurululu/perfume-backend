@@ -22,7 +22,8 @@ define('TP_SANDBOX',       false);    // true = test mode | false = live product
 define('STORE_NAME',       'The Artisan Parfum');
 define('STORE_EMAIL',      'info@theartisanparfum.my');
 define('WA_NUMBER',        '601159003985');
-define('BASE_URL', 'https://www.theartisan.my'); // ✅ FIXED
+define('BASE_URL',      'https://www.theartisan.my');       // frontend (for links to your store)
+define('BACKEND_URL',   'https://perfume-backend-9653.onrender.com'); // backend (for PHP callbacks)
 define('MIN_ORDER_RM',     1);
 
 // ToyyibPay API endpoint
@@ -135,8 +136,8 @@ $postFields = [
     'billPriceSetting'        => 1,
     'billPayorInfo'           => 1,
     'billAmount'              => $totalSen,
-    'billReturnUrl'           => BASE_URL . '/thankyou.php?ref=' . $orderId,
-    'billCallbackUrl'         => BASE_URL . '/callback.php',
+    'billReturnUrl'           => BACKEND_URL . '/thankyou.php?ref=' . $orderId,
+    'billCallbackUrl'         => BACKEND_URL . '/callback.php',
     'billExternalReferenceNo' => $orderId,
     'billTo'                  => $name,
     'billEmail'               => !empty($email) ? $email : STORE_EMAIL,
