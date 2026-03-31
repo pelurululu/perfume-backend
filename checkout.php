@@ -1,7 +1,7 @@
 <?php
 
 // ── CORS — allow Vercel frontend to call this backend ──
-header('Access-Control-Allow-Origin: https://perfume-backend-9653.onrender.com');
+header('Access-Control-Allow-Origin: https://theartisan.my');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
