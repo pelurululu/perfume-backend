@@ -33,13 +33,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 /* =====================================================
    CONFIG — INTERN KENA UBAH BAHAGIAN INI
 ===================================================== */
-define('TP_SECRET_KEY',    'YOUR_TOYYIBPAY_SECRET_KEY');  // Dari dashboard ToyyibPay
-define('TP_CATEGORY_CODE', 'YOUR_CATEGORY_CODE');          // Dari dashboard ToyyibPay
+define('TP_SECRET_KEY',    getenv('TP_SECRET_KEY'));
+define('TP_CATEGORY_CODE', getenv('TP_CATEGORY_CODE'));
+define('BASE_URL',         'https://perfume-backend.onrender.com');
 define('TP_SANDBOX',       true);    // true = test mode | false = live production
 define('STORE_NAME',       'The Artisan Parfum');
 define('STORE_EMAIL',      'info@theartisanparfum.my');    // Emel tuan kedai
 define('WA_NUMBER',        '601159003985');                  // Nombor WA untuk fallback
-define('BASE_URL',         'https://theartisanparfum.my'); // ← TUKAR kepada domain anda (tiada slash di hujung)
+define('BASE_URL',         'https://theartisan.my'); // ← TUKAR kepada domain anda (tiada slash di hujung)
 define('MIN_ORDER_RM',     1);                               // Minimum order dalam RM
 
 // ToyyibPay API endpoint
