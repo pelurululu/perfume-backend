@@ -1,69 +1,63 @@
 <?php
 /**
- * =====================================================
- * THE ARTISAN PARFUM — callback.php
- * ToyyibPay Payment Callback Handler
- *
- * ToyyibPay akan POST ke URL ini setiap kali ada
- * pembayaran (berjaya, gagal, atau pending).
- *
- * INTERN NOTE:
- * - Fail ini berfungsi di background (pelanggan tak nampak)
- * - Semua data bayaran akan dilog ke payments.log
- * - Untuk production: tambah code update database di sini
- * =====================================================
+ * THE ARTISAN PARFUM — callback.php (v2 + Supabase)
+ * ToyyibPay posts here after payment
  */
 
 define('LOG_FILE',  __DIR__ . '/payments.log');
 define('WA_NUMBER', '601159003985');
-define('STORE_NAME','The Artisan Parfum');
+define('SB_URL',    'https://oyhtkqfmlwbkjbcfgqxm.supabase.co');
+define('SB_KEY',    getenv('SB_SERVICE_KEY'));
 
-/* ─── HELPER ─── */
 function logPayment(string $msg): void {
     file_put_contents(LOG_FILE, '[' . date('Y-m-d H:i:s') . '] ' . $msg . "\n", FILE_APPEND | LOCK_EX);
 }
 
-/* ─── READ CALLBACK DATA ─── */
-// ToyyibPay sends both POST and GET
-$billCode = $_POST['billcode']   ?? $_GET['billcode']   ?? '';
-$refNo    = $_POST['refno']      ?? $_GET['refno']      ?? '';
-$status   = $_POST['status']     ?? $_GET['status']     ?? '';
-$reason   = $_POST['reason']     ?? $_GET['reason']     ?? '';
-$orderId  = $_POST['order_id']   ?? $_GET['order_id']   ?? '';
-$amount   = $_POST['amount']     ?? $_GET['amount']     ?? 0;
+function updateOrderInSupabase(string $orderRef, string $status, string $payRef): void {
+    $sbKey = SB_KEY;
+    if (!$sbKey || !$orderRef) return;
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL            => SB_URL . '/rest/v1/orders?order_ref=eq.' . urlencode($orderRef),
+        CURLOPT_CUSTOMREQUEST  => 'PATCH',
+        CURLOPT_POSTFIELDS     => json_encode(['pay_status' => $status, 'pay_ref' => $payRef]),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_HTTPHEADER     => [
+            'apikey: ' . $sbKey,
+            'Authorization: Bearer ' . $sbKey,
+            'Content-Type: application/json',
+            'Prefer: return=minimal'
+        ]
+    ]);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
+$billCode = $_POST['billcode'] ?? $_GET['billcode'] ?? '';
+$refNo    = $_POST['refno']    ?? $_GET['refno']    ?? '';
+$status   = $_POST['status']   ?? $_GET['status']   ?? '';
+$reason   = $_POST['reason']   ?? $_GET['reason']   ?? '';
+$orderRef = $_POST['order_id'] ?? $_GET['order_id'] ?? '';
+$amount   = $_POST['amount']   ?? $_GET['amount']   ?? 0;
 $amountRM = number_format((int)$amount / 100, 2);
 
-logPayment("CALLBACK | BillCode:{$billCode} | Ref:{$refNo} | Status:{$status} | Amount:RM{$amountRM} | Reason:{$reason}");
+logPayment("CALLBACK | BillCode:{$billCode} | Ref:{$refNo} | Status:{$status} | Amount:RM{$amountRM}");
 
-/* ─── PROCESS BY STATUS ─── */
-// Status codes: 1 = success, 2 = pending, 3 = failed
 if ($status == '1') {
-    // ✅ PAYMENT SUCCESS
     logPayment("SUCCESS | {$billCode} | Ref:{$refNo} | RM{$amountRM}");
-
-    /*
-     * TODO (INTERN): Add your database update here when ready
-     * Example:
-     *   $pdo = new PDO(...);
-     *   $pdo->prepare("UPDATE orders SET status='paid', payment_ref=? WHERE order_ref=?")
-     *       ->execute([$refNo, $billCode]);
-     *
-     * TODO: Send email confirmation to customer here
-     * TODO: Notify admin via WhatsApp API (optional)
-     */
-
+    updateOrderInSupabase($billCode, 'paid', $refNo);
     http_response_code(200);
     echo 'OK';
-
 } elseif ($status == '2') {
-    // ⏳ PAYMENT PENDING
     logPayment("PENDING | {$billCode} | Ref:{$refNo}");
+    updateOrderInSupabase($billCode, 'pending', $refNo);
     http_response_code(200);
     echo 'PENDING_NOTED';
-
 } else {
-    // ❌ PAYMENT FAILED
     logPayment("FAILED | {$billCode} | Reason:{$reason}");
+    updateOrderInSupabase($billCode, 'failed', $refNo);
     http_response_code(200);
     echo 'FAILED_NOTED';
 }
