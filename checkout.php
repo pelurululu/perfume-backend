@@ -172,6 +172,11 @@ $httpCode    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError   = curl_error($ch);
 curl_close($ch);
 
+file_put_contents(__DIR__ . '/debug.log',
+    date('H:i:s') . " | HTTP:{$httpCode} | cURL:{$curlError} | Response:{$apiResponse}\n",
+    FILE_APPEND
+);
+
 /* =====================================================
    STEP 5 — PROCESS API RESPONSE
 ===================================================== */
