@@ -1,7 +1,7 @@
 <?php
 
 // ── CORS — allow Vercel frontend to call this backend ──
-header('Access-Control-Allow-Origin: https://theartisan.my');
+header('Access-Control-Allow-Origin: https://www.theartisan.my');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
@@ -22,7 +22,7 @@ define('TP_SANDBOX',       false);    // true = test mode | false = live product
 define('STORE_NAME',       'The Artisan Parfum');
 define('STORE_EMAIL',      'info@theartisanparfum.my');
 define('WA_NUMBER',        '601159003985');
-define('BASE_URL',         'https://perfume-backend-9653.onrender.com'); // ✅ FIXED
+define('BASE_URL', 'https://www.theartisan.my'); // ✅ FIXED
 define('MIN_ORDER_RM',     1);
 
 // ToyyibPay API endpoint
