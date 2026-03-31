@@ -118,7 +118,7 @@ if (!empty($errors)) {
 ===================================================== */
 $orderId   = generateOrderRef($phone);
 $totalSen  = $total * 100;
-$billLabel = STORE_NAME . ' — ' . $orderId;
+$billLabel = 'Artisan — ' . $orderId;
 $billDesc  = "Pesanan #{$orderId}: " . substr($items, 0, 150);
 if ($note) $billDesc .= " | Nota: " . substr($note, 0, 40);
 
