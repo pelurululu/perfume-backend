@@ -344,6 +344,14 @@ tr.clickable:hover td{background:rgba(138,106,58,.04)}
 }
 .img-drop-zone:hover { border-color: var(--g); background: rgba(138,106,58,.03); }
 .img-drop-zone input { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+.popup-img-preview {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: none;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
 .img-drop-zone-text { font-size:9px;color:var(--muted);letter-spacing:.06em; }
 .slide-bg-preview {
   width:100%;
@@ -1534,6 +1542,26 @@ function renderPopupForm() {
         <span>Tunjuk popup kepada pengunjung baru</span>
       </label>
     </div>
+    <div class="form-group" style="padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--border)">
+      <label>Gambar Popup (bahagian kiri)</label>
+      <img id="popup-img-preview" class="popup-img-preview"
+        src="${escHtml(p.image_url || '')}"
+        style="display:${p.image_url ? 'block' : 'none'}">
+      <div class="img-drop-zone" id="popup-img-drop-zone">
+        <div class="img-drop-zone-text">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin:0 auto 6px;opacity:.3"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Klik atau seret gambar di sini
+        </div>
+        <input type="file" accept="image/*" onchange="handlePopupImageUpload(this)">
+      </div>
+      ${p.image_url ? `
+      <button type="button" onclick="removePopupImage()"
+        style="margin-top:6px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid rgba(176,64,64,.25);color:var(--red);padding:4px 10px;cursor:pointer">
+        × Buang Gambar
+      </button>` : ''}
+      <input type="hidden" id="popup-image-url" value="${escHtml(p.image_url || '')}">
+      <div style="margin-top:7px;font-size:8.5px;color:var(--muted)">Jika tiada gambar, SVG lalai akan dipaparkan.</div>
+    </div>
     <div class="form-row">
       <div class="form-group">
         <label>Eyebrow Text</label>
@@ -1602,7 +1630,35 @@ function renderPopupForm() {
     if (el && pv) el.addEventListener('input', () => { pv.textContent = el.value; });
   });
 }
+async function handlePopupImageUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const zone = document.getElementById('popup-img-drop-zone');
+  zone.style.opacity = '.5';
+  zone.style.pointerEvents = 'none';
+  try {
+    const url = await uploadImage(file);
+    document.getElementById('popup-image-url').value = url;
+    const preview = document.getElementById('popup-img-preview');
+    preview.src = url;
+    preview.style.display = 'block';
+    toast('Gambar dimuat naik ✓');
+  } catch(e) {
+    toast('Gagal muat naik gambar', 'error');
+  } finally {
+    zone.style.opacity = '';
+    zone.style.pointerEvents = '';
+  }
+}
 
+function removePopupImage() {
+  document.getElementById('popup-image-url').value = '';
+  const preview = document.getElementById('popup-img-preview');
+  preview.src = '';
+  preview.style.display = 'none';
+  toast('Gambar dibuang');
+}
+    
 async function savePopup() {
   try {
     const data = {
@@ -1614,6 +1670,7 @@ async function savePopup() {
       cta_text:    document.getElementById('popup-cta-text').value.trim(),
       cta_href:    document.getElementById('popup-cta-href').value.trim(),
       active:      document.getElementById('popup-active').checked,
+    image_url: document.getElementById('popup-image-url')?.value?.trim() ?? '',
     };
     await sbPatch('promo_popup', 'id=eq.1', data);
     popupData = { ...popupData, ...data };
