@@ -292,6 +292,54 @@ tr:hover td{background:var(--bg2);color:var(--ink)}
 tr.clickable{cursor:pointer}
 tr.clickable:hover td{background:rgba(138,106,58,.04)}
 
+/* ── CAROUSEL EDITOR ── */
+.slide-editor {
+  background: var(--card);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+  transition: background .3s;
+}
+.slide-editor-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.slide-editor-header:hover { background: var(--bg2); }
+.slide-editor-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  color: var(--ink);
+  font-weight: 400;
+}
+.slide-editor-body {
+  padding: 24px;
+  display: none;
+}
+.slide-editor-body.open { display: block; }
+.slide-preview-bar {
+  height: 6px;
+  margin-bottom: 18px;
+  border-radius: 2px;
+}
+.color-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.color-swatch {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
   .admin-wrap{grid-template-columns:1fr}
@@ -349,6 +397,18 @@ tr.clickable:hover td{background:rgba(138,106,58,.04)}
         Pesanan
       </div>
     </div>
+
+      <div class="nav-group">
+  <div class="nav-label">Kandungan</div>
+  <div class="nav-item" onclick="showPage('carousel')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="10" rx="2"/><path d="M7 7V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"/><line x1="12" y1="12" x2="12" y2="12.01"/></svg>
+    Hero Carousel
+  </div>
+  <div class="nav-item" onclick="showPage('popup')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    Promo Popup
+  </div>
+</div>
 
     <div class="nav-group">
       <div class="nav-label">Produk</div>
@@ -472,6 +532,34 @@ tr.clickable:hover td{background:rgba(138,106,58,.04)}
         <button class="btn btn-primary" onclick="savePricing()">Simpan Harga</button>
       </div>
     </div>
+
+      <!-- ══ CAROUSEL PAGE ══ -->
+<div class="page" id="page-carousel">
+  <div class="page-header">
+    <div class="page-eyebrow">Kandungan</div>
+    <h1 class="page-title">Hero <em>Carousel</em></h1>
+  </div>
+  <div id="carousel-slides-wrap">
+    <div class="loading"><div class="spinner"></div>Memuatkan...</div>
+  </div>
+  <div style="margin-top:16px;display:flex;justify-content:flex-end">
+    <button class="btn btn-primary" onclick="saveCarousel()">Simpan Semua Slaid</button>
+  </div>
+</div>
+
+<!-- ══ POPUP PAGE ══ -->
+<div class="page" id="page-popup">
+  <div class="page-header">
+    <div class="page-eyebrow">Kandungan</div>
+    <h1 class="page-title">Promo <em>Popup</em></h1>
+  </div>
+  <div class="table-wrap" style="max-width:640px">
+    <div class="table-header"><div class="table-title">Tetapan Popup</div></div>
+    <div style="padding:28px" id="popup-form-wrap">
+      <div class="loading"><div class="spinner"></div>Memuatkan...</div>
+    </div>
+  </div>
+</div>
 
   </main>
 </div>
@@ -766,6 +854,8 @@ function showPage(page) {
   if (page === 'orders')    loadOrders();
   if (page === 'products')  loadProducts();
   if (page === 'pricing')   loadPricing();
+if (page === 'carousel')  loadCarousel();
+if (page === 'popup')     loadPopup();;
 }
 
 /* ══════════════════════════════════════════
@@ -1216,9 +1306,251 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeOrderDetail(); closeProductModal(); }
 });
 
+/* ══════════════════════════════════════════
+   CAROUSEL EDITOR
+══════════════════════════════════════════ */
+let carouselData = [];
+
+async function loadCarousel() {
+  const wrap = document.getElementById('carousel-slides-wrap');
+  wrap.innerHTML = '<div class="loading"><div class="spinner"></div>Memuatkan...</div>';
+  try {
+    carouselData = await sbGet('carousel_slides', 'order=slide_order.asc') || [];
+    renderCarouselEditor();
+  } catch(e) { toast('Gagal muatkan carousel', 'error'); }
+}
+
+function renderCarouselEditor() {
+  const wrap = document.getElementById('carousel-slides-wrap');
+  if (!carouselData.length) {
+    wrap.innerHTML = '<div class="empty-state"><p>Tiada slaid</p></div>';
+    return;
+  }
+  wrap.innerHTML = carouselData.map((slide, i) => `
+    <div class="slide-editor" id="slide-editor-${slide.id}">
+      <div class="slide-editor-header" onclick="toggleSlideEditor(${slide.id})">
+        <div class="slide-editor-title">Slaid ${slide.slide_order} — ${slide.eyebrow || '(tanpa eyebrow)'}</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--muted);cursor:pointer" onclick="event.stopPropagation()">
+            <input type="checkbox" ${slide.active ? 'checked' : ''} onchange="toggleSlideActive(${slide.id}, this.checked)" style="accent-color:var(--g);cursor:pointer">
+            Aktif
+          </label>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="chevron-${slide.id}" style="transition:.2s;color:var(--muted)"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="slide-editor-body" id="slide-body-${slide.id}">
+        <div class="slide-preview-bar" style="background:${slide.bg_gradient}"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Eyebrow Text</label>
+            <input type="text" id="s${slide.id}-eyebrow" value="${escHtml(slide.eyebrow || '')}">
+          </div>
+          <div class="form-group">
+            <label>Tajuk Utama</label>
+            <input type="text" id="s${slide.id}-title" value="${escHtml(slide.title || '')}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tajuk <em>Italic</em> (bahagian emas)</label>
+          <input type="text" id="s${slide.id}-title-em" value="${escHtml(slide.title_em || '')}">
+        </div>
+        <div class="form-group">
+          <label>Deskripsi</label>
+          <textarea id="s${slide.id}-desc" style="min-height:52px">${escHtml(slide.description || '')}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Teks Butang</label>
+            <input type="text" id="s${slide.id}-btn-text" value="${escHtml(slide.btn_text || '')}">
+          </div>
+          <div class="form-group">
+            <label>Onclick Butang</label>
+            <input type="text" id="s${slide.id}-btn-onclick" value="${escHtml(slide.btn_onclick || '')}" placeholder="e.g. location.href='#collection'">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Warna Latar (CSS gradient atau warna)</label>
+          <div class="color-row">
+            <div class="color-swatch" id="swatch-${slide.id}" style="background:${slide.bg_gradient}" title="Preview"></div>
+            <input type="text" id="s${slide.id}-bg" value="${escHtml(slide.bg_gradient || '')}" oninput="document.getElementById('swatch-${slide.id}').style.background=this.value;document.querySelector('#slide-editor-${slide.id} .slide-preview-bar').style.background=this.value" style="flex:1;font-size:11px">
+          </div>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+            ${[
+              ['Coklat Gelap','linear-gradient(135deg,#1a0f0a 0%,#2d1f14 40%,#1a0f0a 100%)'],
+              ['Hijau Gelap','linear-gradient(135deg,#0d1a12 0%,#142a1c 40%,#0d1a12 100%)'],
+              ['Ungu Gelap','linear-gradient(135deg,#1a0d18 0%,#2d1428 40%,#1a0d18 100%)'],
+              ['Biru Gelap','linear-gradient(135deg,#0a0d1a 0%,#141c2d 40%,#0a0d1a 100%)'],
+              ['Hitam','linear-gradient(135deg,#0a0908 0%,#1a1815 40%,#0a0908 100%)'],
+            ].map(([name, val]) => `<button type="button" onclick="applyBg(${slide.id},'${val}')"
+              style="font-size:7.5px;padding:4px 10px;background:${val};color:#fff;border:none;cursor:pointer;letter-spacing:.08em;border-radius:2px">${name}</button>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toggleSlideEditor(id) {
+  const body = document.getElementById('slide-body-' + id);
+  const chev = document.getElementById('chevron-' + id);
+  const isOpen = body.classList.toggle('open');
+  chev.style.transform = isOpen ? 'rotate(180deg)' : '';
+}
+
+function applyBg(id, val) {
+  document.getElementById('s' + id + '-bg').value = val;
+  document.getElementById('swatch-' + id).style.background = val;
+  document.querySelector('#slide-editor-' + id + ' .slide-preview-bar').style.background = val;
+}
+
+async function toggleSlideActive(id, active) {
+  try {
+    await sbPatch('carousel_slides', 'id=eq.' + id, { active });
+    toast(active ? 'Slaid diaktifkan' : 'Slaid dimatikan');
+    const s = carouselData.find(x => x.id === id);
+    if (s) s.active = active;
+  } catch(e) { toast('Gagal kemas kini', 'error'); }
+}
+
+async function saveCarousel() {
+  try {
+    for (const slide of carouselData) {
+      const id = slide.id;
+      const data = {
+        eyebrow:     document.getElementById('s' + id + '-eyebrow')?.value?.trim() ?? '',
+        title:       document.getElementById('s' + id + '-title')?.value?.trim() ?? '',
+        title_em:    document.getElementById('s' + id + '-title-em')?.value?.trim() ?? '',
+        description: document.getElementById('s' + id + '-desc')?.value?.trim() ?? '',
+        btn_text:    document.getElementById('s' + id + '-btn-text')?.value?.trim() ?? '',
+        btn_onclick: document.getElementById('s' + id + '-btn-onclick')?.value?.trim() ?? '',
+        bg_gradient: document.getElementById('s' + id + '-bg')?.value?.trim() ?? '',
+      };
+      await sbPatch('carousel_slides', 'id=eq.' + id, data);
+    }
+    toast('Semua slaid disimpan ✓');
+  } catch(e) { toast('Gagal simpan carousel', 'error'); }
+}
+
+/* ══════════════════════════════════════════
+   POPUP EDITOR
+══════════════════════════════════════════ */
+let popupData = {};
+
+async function loadPopup() {
+  const wrap = document.getElementById('popup-form-wrap');
+  wrap.innerHTML = '<div class="loading"><div class="spinner"></div>Memuatkan...</div>';
+  try {
+    const rows = await sbGet('promo_popup', 'id=eq.1') || [];
+    popupData = rows[0] || {};
+    renderPopupForm();
+  } catch(e) { toast('Gagal muatkan popup', 'error'); }
+}
+
+function renderPopupForm() {
+  const p = popupData;
+  document.getElementById('popup-form-wrap').innerHTML = `
+    <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0;font-size:11px;color:var(--ink)">
+        <input type="checkbox" id="popup-active" ${p.active ? 'checked' : ''} style="accent-color:var(--g);cursor:pointer;width:auto;border:none;background:none;padding:0">
+        <span>Tunjuk popup kepada pengunjung baru</span>
+      </label>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Eyebrow Text</label>
+        <input type="text" id="popup-eyebrow" value="${escHtml(p.eyebrow || '')}">
+      </div>
+      <div class="form-group">
+        <label>Teks Simpanan (cth: RM 49)</label>
+        <input type="text" id="popup-saving" value="${escHtml(p.saving_text || '')}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tajuk Utama</label>
+        <input type="text" id="popup-title" value="${escHtml(p.title || '')}">
+      </div>
+      <div class="form-group">
+        <label>Tajuk <em>Italic</em> (warna emas)</label>
+        <input type="text" id="popup-title-em" value="${escHtml(p.title_em || '')}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Deskripsi</label>
+      <textarea id="popup-desc" style="min-height:68px">${escHtml(p.description || '')}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Teks Butang CTA</label>
+        <input type="text" id="popup-cta-text" value="${escHtml(p.cta_text || '')}">
+      </div>
+      <div class="form-group">
+        <label>Link Butang CTA</label>
+        <input type="text" id="popup-cta-href" value="${escHtml(p.cta_href || '')}" placeholder="#bundle">
+      </div>
+    </div>
+    <div style="margin-top:8px;display:flex;justify-content:flex-end">
+      <button class="btn btn-primary" onclick="savePopup()">Simpan Popup</button>
+    </div>
+
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+      <div style="font-size:8px;letter-spacing:.22em;text-transform:uppercase;color:var(--g);margin-bottom:10px">Preview</div>
+      <div id="popup-preview" style="background:var(--bg2);border:1px solid var(--border);padding:20px 24px;max-width:300px">
+        <div style="font-size:7px;letter-spacing:.38em;text-transform:uppercase;color:var(--g);margin-bottom:6px" id="prev-eyebrow">${escHtml(p.eyebrow || '')}</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300;line-height:1.2;color:var(--ink);margin-bottom:8px">
+          <span id="prev-title">${escHtml(p.title || '')}</span><br>
+          <em style="color:var(--g)" id="prev-title-em">${escHtml(p.title_em || '')}</em>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:6px" id="prev-desc">${escHtml(p.description || '')}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Jimat sehingga <strong style="color:var(--g2)" id="prev-saving">${escHtml(p.saving_text || '')}</strong></div>
+        <div style="display:inline-block;background:var(--ink);color:#fff;padding:9px 18px;font-size:8.5px;letter-spacing:.18em;text-transform:uppercase" id="prev-cta">${escHtml(p.cta_text || '')}</div>
+      </div>
+    </div>
+  `;
+
+  // Live preview bindings
+  const bindings = [
+    ['popup-eyebrow', 'prev-eyebrow'],
+    ['popup-title', 'prev-title'],
+    ['popup-title-em', 'prev-title-em'],
+    ['popup-desc', 'prev-desc'],
+    ['popup-saving', 'prev-saving'],
+    ['popup-cta-text', 'prev-cta'],
+  ];
+  bindings.forEach(([inputId, previewId]) => {
+    const el = document.getElementById(inputId);
+    const pv = document.getElementById(previewId);
+    if (el && pv) el.addEventListener('input', () => { pv.textContent = el.value; });
+  });
+}
+
+async function savePopup() {
+  try {
+    const data = {
+      eyebrow:     document.getElementById('popup-eyebrow').value.trim(),
+      title:       document.getElementById('popup-title').value.trim(),
+      title_em:    document.getElementById('popup-title-em').value.trim(),
+      description: document.getElementById('popup-desc').value.trim(),
+      saving_text: document.getElementById('popup-saving').value.trim(),
+      cta_text:    document.getElementById('popup-cta-text').value.trim(),
+      cta_href:    document.getElementById('popup-cta-href').value.trim(),
+      active:      document.getElementById('popup-active').checked,
+    };
+    await sbPatch('promo_popup', 'id=eq.1', data);
+    popupData = { ...popupData, ...data };
+    toast('Popup disimpan ✓');
+  } catch(e) { toast('Gagal simpan popup', 'error'); }
+}
+
 <?php if ($loggedIn): ?>
 loadDashboard();
 <?php endif; ?>
+
+
 </script>
 </body>
 </html>
