@@ -331,6 +331,29 @@ tr.clickable:hover td{background:rgba(138,106,58,.04)}
   align-items: flex-end;
   gap: 10px;
 }
+
+.img-drop-zone {
+  border: 1px dashed rgba(138,106,58,.35);
+  padding: 18px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--t);
+  position: relative;
+  background: var(--bg);
+  margin-top: 6px;
+}
+.img-drop-zone:hover { border-color: var(--g); background: rgba(138,106,58,.03); }
+.img-drop-zone input { position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%; }
+.img-drop-zone-text { font-size:9px;color:var(--muted);letter-spacing:.06em; }
+.slide-bg-preview {
+  width:100%;
+  height:80px;
+  object-fit:cover;
+  display:none;
+  margin-bottom:8px;
+  border:1px solid var(--border);
+}
+
 .color-swatch {
   width: 38px;
   height: 38px;
@@ -1369,7 +1392,26 @@ function renderCarouselEditor() {
           </div>
         </div>
         <div class="form-group">
-          <label>Warna Latar (CSS gradient atau warna)</label>
+          <label>Gambar Latar (opsyen — mengatasi warna)</label>
+          <img id="slide-bg-img-preview-${slide.id}" class="slide-bg-preview"
+            src="${slide.bg_image_url || ''}"
+            style="display:${slide.bg_image_url ? 'block' : 'none'}">
+          <div class="img-drop-zone" id="drop-zone-${slide.id}">
+            <div class="img-drop-zone-text">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin:0 auto 6px;opacity:.3"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              Klik atau seret gambar di sini
+            </div>
+            <input type="file" accept="image/*" onchange="handleSlideImageUpload(${slide.id}, this)">
+          </div>
+          ${slide.bg_image_url ? `
+          <button type="button" onclick="removeSlideImage(${slide.id})"
+            style="margin-top:6px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid rgba(176,64,64,.25);color:var(--red);padding:4px 10px;cursor:pointer">
+            × Buang Gambar
+          </button>` : ''}
+          <input type="hidden" id="s${slide.id}-bg-image-url" value="${escHtml(slide.bg_image_url || '')}">
+        </div>
+        <div class="form-group">
+          <label>Warna Overlay / Latar (CSS gradient)</label>
           <div class="color-row">
             <div class="color-swatch" id="swatch-${slide.id}" style="background:${slide.bg_gradient}" title="Preview"></div>
             <input type="text" id="s${slide.id}-bg" value="${escHtml(slide.bg_gradient || '')}" oninput="document.getElementById('swatch-${slide.id}').style.background=this.value;document.querySelector('#slide-editor-${slide.id} .slide-preview-bar').style.background=this.value" style="flex:1;font-size:11px">
@@ -1416,6 +1458,38 @@ async function toggleSlideActive(id, active) {
   } catch(e) { toast('Gagal kemas kini', 'error'); }
 }
 
+async function handleSlideImageUpload(slideId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const btn = input.closest('.img-drop-zone');
+  btn.style.opacity = '.5';
+  btn.style.pointerEvents = 'none';
+  try {
+    const url = await uploadImage(file);
+    document.getElementById('s' + slideId + '-bg-image-url').value = url;
+    const preview = document.getElementById('slide-bg-img-preview-' + slideId);
+    preview.src = url;
+    preview.style.display = 'block';
+    // Update the preview bar with the image
+    document.querySelector('#slide-editor-' + slideId + ' .slide-preview-bar').style.backgroundImage = `url('${url}')`;
+    document.querySelector('#slide-editor-' + slideId + ' .slide-preview-bar').style.backgroundSize = 'cover';
+    toast('Gambar dimuat naik ✓');
+  } catch(e) {
+    toast('Gagal muat naik gambar', 'error');
+  } finally {
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
+  }
+}
+
+function removeSlideImage(slideId) {
+  document.getElementById('s' + slideId + '-bg-image-url').value = '';
+  const preview = document.getElementById('slide-bg-img-preview-' + slideId);
+  preview.src = '';
+  preview.style.display = 'none';
+  toast('Gambar dibuang');
+}
+    
 async function saveCarousel() {
   try {
     for (const slide of carouselData) {
@@ -1428,6 +1502,7 @@ async function saveCarousel() {
         btn_text:    document.getElementById('s' + id + '-btn-text')?.value?.trim() ?? '',
         btn_onclick: document.getElementById('s' + id + '-btn-onclick')?.value?.trim() ?? '',
         bg_gradient: document.getElementById('s' + id + '-bg')?.value?.trim() ?? '',
+        bg_image_url: document.getElementById('s' + id + '-bg-image-url')?.value?.trim() ?? '',
       };
       await sbPatch('carousel_slides', 'id=eq.' + id, data);
     }
