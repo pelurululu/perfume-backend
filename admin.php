@@ -795,11 +795,11 @@ async function cycleStatus(id, current, el) {
     await sbPatch('orders', 'id=eq.' + id, { pay_status: next });
     // Sync in-memory arrays
     [ordersData, allOrders].forEach(arr => {
-      const o = arr.find(x => x.id === id);
+  const o = arr.find(x => x.id == id);
       if (o) o.pay_status = next;
     });
     // Sync detail modal if open
-    if (currentDetailOrderId === id) {
+    if (currentDetailOrderId == id) {
       document.getElementById('od-status-select').value = next;
       renderOrderDetailBadge(next);
     }
@@ -946,7 +946,7 @@ async function updateOrderStatus(id, status) {
    Shows ALL customer info including notes
 ══════════════════════════════════════════ */
 function openOrderDetail(id) {
-  const o = ordersData.find(x => x.id === id) || allOrders.find(x => x.id === id);
+  const o = ordersData.find(x => x.id == id) || allOrders.find(x => x.id == id);
   if (!o) return;
   currentDetailOrderId = id;
 
