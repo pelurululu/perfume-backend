@@ -439,6 +439,14 @@ tr.clickable:hover td{background:rgba(138,106,58,.04)}
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
     Promo Popup
   </div>
+  <div class="nav-item" onclick="showPage('gendercats')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    Kategori Jantina
+  </div>
+  <div class="nav-item" onclick="showPage('scentfamilies')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    Keluarga Wangian
+  </div>
 </div>
 
     <div class="nav-group">
@@ -590,6 +598,32 @@ tr.clickable:hover td{background:rgba(138,106,58,.04)}
       <div class="loading"><div class="spinner"></div>Memuatkan...</div>
     </div>
   </div>
+</div>
+
+<!-- ══ GENDER CATEGORIES PAGE ══ -->
+<div class="page" id="page-gendercats">
+  <div class="page-header">
+    <div class="page-eyebrow">Kandungan</div>
+    <h1 class="page-title">Kategori <em>Jantina</em></h1>
+  </div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Gambar dan teks untuk kad Men / Women / Unisex di halaman utama, dan banner di halaman Koleksi.</p>
+  <div id="gendercats-wrap"><div class="loading"><div class="spinner"></div>Memuatkan...</div></div>
+  <div style="margin-top:16px;display:flex;justify-content:flex-end">
+    <button class="btn btn-primary" onclick="saveGenderCats()">Simpan Kategori</button>
+  </div>
+</div>
+
+<!-- ══ SCENT FAMILIES PAGE ══ -->
+<div class="page" id="page-scentfamilies">
+  <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end">
+    <div>
+      <div class="page-eyebrow">Kandungan</div>
+      <h1 class="page-title">Keluarga <em>Wangian</em></h1>
+    </div>
+    <button class="btn btn-primary" onclick="openScentFamilyModal()">+ Tambah Keluarga</button>
+  </div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:20px">Item-item dalam hamburger menu. Setiap keluarga boleh ada gambar dan dikaitkan dengan satu atau lebih jantina (m/w/u).</p>
+  <div id="scentfamilies-wrap"><div class="loading"><div class="spinner"></div>Memuatkan...</div></div>
 </div>
 
   </main>
@@ -781,6 +815,38 @@ tr.clickable:hover td{background:rgba(138,106,58,.04)}
   </div>
 </div>
 
+<!-- ══ SCENT FAMILY MODAL ══ -->
+<div class="modal-overlay" id="scent-family-modal" onclick="handleOverlayClick(event,'scent-family-modal')">
+  <div class="modal-box" style="max-width:500px">
+    <button class="modal-close" onclick="closeScentFamilyModal()" aria-label="Tutup">×</button>
+    <div class="modal-eyebrow">Keluarga Wangian</div>
+    <h2 class="modal-title" id="sfm-title">Tambah Keluarga</h2>
+    <input type="hidden" id="sfm-id">
+    <div class="form-group"><label>Nama</label><input type="text" id="sfm-name" placeholder="e.g. Woody & Smoky"></div>
+    <div class="form-group"><label>Slug (untuk URL filter)</label><input type="text" id="sfm-slug" placeholder="e.g. woody"></div>
+    <div class="form-group"><label>Jantina (tulis mwu, m, w, u — kombinasi)</label><input type="text" id="sfm-genders" placeholder="mwu" maxlength="3"></div>
+    <div class="form-group"><label>Pautan (opsyen — default ke koleksi.html)</label><input type="text" id="sfm-href" placeholder="koleksi.html?gender=m&family=woody"></div>
+    <div class="form-group"><label>Susunan</label><input type="number" id="sfm-order" value="1" min="1"></div>
+    <div class="form-group">
+      <label>Gambar Latar</label>
+      <img id="sfm-img-preview" style="width:100%;max-height:140px;object-fit:cover;display:none;margin-bottom:8px">
+      <div class="img-drop-zone" id="sfm-drop-zone">
+        <div class="img-drop-zone-text">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin:0 auto 6px;opacity:.3"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Klik atau seret gambar
+        </div>
+        <input type="file" accept="image/*" onchange="handleSFMImageUpload(this)">
+      </div>
+      <input type="hidden" id="sfm-image-url">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+      <input type="checkbox" id="sfm-active" checked style="accent-color:var(--g);cursor:pointer;width:auto">
+      <label for="sfm-active" style="margin-bottom:0;cursor:pointer;font-size:12px">Aktif (tunjuk dalam menu)</label>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveScentFamily()">Simpan</button>
+  </div>
+</div>
+
 <!-- ══ TOAST ══ -->
 <div class="toast" id="toast"></div>
 
@@ -881,12 +947,14 @@ function showPage(page) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   document.querySelector(`[onclick="showPage('${page}')"]`).classList.add('active');
-  if (page === 'dashboard') loadDashboard();
-  if (page === 'orders')    loadOrders();
-  if (page === 'products')  loadProducts();
-  if (page === 'pricing')   loadPricing();
-if (page === 'carousel')  loadCarousel();
-if (page === 'popup')     loadPopup();;
+  if (page === 'dashboard')     loadDashboard();
+  if (page === 'orders')        loadOrders();
+  if (page === 'products')      loadProducts();
+  if (page === 'pricing')       loadPricing();
+  if (page === 'carousel')      loadCarousel();
+  if (page === 'popup')         loadPopup();
+  if (page === 'gendercats')    loadGenderCats();
+  if (page === 'scentfamilies') loadScentFamilies();
 }
 
 /* ══════════════════════════════════════════
@@ -1676,6 +1744,211 @@ async function savePopup() {
     popupData = { ...popupData, ...data };
     toast('Popup disimpan ✓');
   } catch(e) { toast('Gagal simpan popup', 'error'); }
+}
+
+/* ══════════════════════════════════════════
+   GENDER CATEGORIES
+   Table: gender_categories (gender, title, subtitle, image_url, bg_color, sort_order)
+══════════════════════════════════════════ */
+let genderCatsData = [];
+
+async function loadGenderCats() {
+  const wrap = document.getElementById('gendercats-wrap');
+  wrap.innerHTML = '<div class="loading"><div class="spinner"></div>Memuatkan...</div>';
+  try {
+    genderCatsData = await sbGet('gender_categories', 'order=sort_order.asc') || [];
+    // Ensure all 3 genders exist
+    ['m','w','u'].forEach(g => { if (!genderCatsData.find(c => c.gender === g)) genderCatsData.push({ gender: g, title: g === 'm' ? 'Men' : g === 'w' ? 'Women' : 'Unisex', subtitle: '', image_url: '', bg_color: '', sort_order: g === 'm' ? 1 : g === 'w' ? 2 : 3 }); });
+    renderGenderCats();
+  } catch(e) { toast('Gagal muatkan kategori', 'error'); wrap.innerHTML = '<p style="color:var(--red);padding:20px">Jadual gender_categories belum wujud. Sila buat dahulu di Supabase.</p>'; }
+}
+
+function renderGenderCats() {
+  const wrap = document.getElementById('gendercats-wrap');
+  const labels = { m: 'Men', w: 'Women', u: 'Unisex' };
+  wrap.innerHTML = genderCatsData.map(cat => `
+    <div class="table-wrap" style="margin-bottom:20px">
+      <div class="table-header"><div class="table-title">${labels[cat.gender] || cat.gender}</div></div>
+      <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div class="form-group"><label>Tajuk Kad</label><input type="text" id="gc-title-${cat.gender}" value="${escHtml(cat.title || '')}"></div>
+          <div class="form-group"><label>Subtitle / Bilangan</label><input type="text" id="gc-sub-${cat.gender}" value="${escHtml(cat.subtitle || '')}" placeholder="e.g. 55 wangian"></div>
+          <div class="form-group"><label>Warna Latar (jika tiada gambar)</label><input type="text" id="gc-bg-${cat.gender}" value="${escHtml(cat.bg_color || '')}" placeholder="#1a1a2e atau linear-gradient(...)"></div>
+        </div>
+        <div>
+          <div class="form-group">
+            <label>Gambar Kad &amp; Banner Koleksi</label>
+            <img id="gc-preview-${cat.gender}" src="${escHtml(cat.image_url || '')}" style="width:100%;max-height:120px;object-fit:cover;display:${cat.image_url ? 'block' : 'none'};margin-bottom:8px;border:1px solid var(--border)">
+            <div class="img-drop-zone">
+              <div class="img-drop-zone-text">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin:0 auto 4px;opacity:.3"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Klik atau seret gambar
+              </div>
+              <input type="file" accept="image/*" onchange="handleGCImageUpload('${cat.gender}', this)">
+            </div>
+            <input type="hidden" id="gc-img-${cat.gender}" value="${escHtml(cat.image_url || '')}">
+            ${cat.image_url ? `<button type="button" onclick="removeGCImage('${cat.gender}')" style="margin-top:6px;font-size:8px;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:1px solid rgba(176,64,64,.25);color:var(--red);padding:4px 10px;cursor:pointer">× Buang Gambar</button>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function handleGCImageUpload(gender, input) {
+  const file = input.files[0]; if (!file) return;
+  input.closest('.img-drop-zone').style.opacity = '.5';
+  try {
+    const url = await uploadImage(file);
+    document.getElementById('gc-img-' + gender).value = url;
+    const preview = document.getElementById('gc-preview-' + gender);
+    preview.src = url; preview.style.display = 'block';
+    toast('Gambar dimuat naik ✓');
+  } catch(e) { toast('Gagal muat naik', 'error'); }
+  finally { input.closest('.img-drop-zone').style.opacity = ''; }
+}
+
+function removeGCImage(gender) {
+  document.getElementById('gc-img-' + gender).value = '';
+  const p = document.getElementById('gc-preview-' + gender);
+  p.src = ''; p.style.display = 'none';
+}
+
+async function saveGenderCats() {
+  try {
+    for (const cat of genderCatsData) {
+      const g = cat.gender;
+      const data = {
+        gender: g,
+        title: document.getElementById('gc-title-' + g)?.value?.trim() || '',
+        subtitle: document.getElementById('gc-sub-' + g)?.value?.trim() || '',
+        bg_color: document.getElementById('gc-bg-' + g)?.value?.trim() || '',
+        image_url: document.getElementById('gc-img-' + g)?.value?.trim() || '',
+        sort_order: cat.sort_order || 1,
+      };
+      // Upsert: try patch first, then post
+      try {
+        await sbPatch('gender_categories', 'gender=eq.' + g, data);
+      } catch(e) {
+        await sbPost('gender_categories', data);
+      }
+    }
+    toast('Kategori disimpan ✓');
+  } catch(e) { toast('Gagal simpan', 'error'); console.error(e); }
+}
+
+/* ══════════════════════════════════════════
+   SCENT FAMILIES
+   Table: scent_families (id, name, slug, genders, href, image_url, sort_order, active)
+══════════════════════════════════════════ */
+let scentFamiliesData = [];
+let editingSFId = null;
+
+async function loadScentFamilies() {
+  const wrap = document.getElementById('scentfamilies-wrap');
+  wrap.innerHTML = '<div class="loading"><div class="spinner"></div>Memuatkan...</div>';
+  try {
+    scentFamiliesData = await sbGet('scent_families', 'order=sort_order.asc') || [];
+    renderScentFamilies();
+  } catch(e) { toast('Gagal muatkan keluarga wangian', 'error'); wrap.innerHTML = '<p style="color:var(--red);padding:20px">Jadual scent_families belum wujud. Sila buat dahulu di Supabase.</p>'; }
+}
+
+function renderScentFamilies() {
+  const wrap = document.getElementById('scentfamilies-wrap');
+  if (!scentFamiliesData.length) { wrap.innerHTML = '<div class="empty-state"><p>Tiada keluarga wangian. Tambah yang pertama!</p></div>'; return; }
+  wrap.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Susunan</th><th>Nama</th><th>Jantina</th><th>Gambar</th><th>Aktif</th><th></th></tr></thead>
+        <tbody>
+          ${scentFamiliesData.map(f => `
+            <tr>
+              <td style="width:60px;color:var(--muted);font-size:12px">${f.sort_order || '—'}</td>
+              <td><strong>${escHtml(f.name)}</strong>${f.slug ? '<br><small style="color:var(--muted)">' + escHtml(f.slug) + '</small>' : ''}</td>
+              <td><span style="font-size:11px;background:var(--bg);border:1px solid var(--border);padding:2px 8px;border-radius:4px">${escHtml(f.genders || 'mwu')}</span></td>
+              <td>${f.image_url ? '<img src="' + escHtml(f.image_url) + '" style="width:48px;height:36px;object-fit:cover;border:1px solid var(--border)">' : '<span style="color:var(--muted);font-size:11px">Tiada</span>'}</td>
+              <td><input type="checkbox" ${f.active ? 'checked' : ''} onchange="toggleSFActive(${f.id}, this.checked)" style="accent-color:var(--g);cursor:pointer"></td>
+              <td style="text-align:right">
+                <button class="btn" onclick="editScentFamily(${f.id})" style="font-size:10px;padding:5px 12px;margin-right:4px">Edit</button>
+                <button class="btn" onclick="deleteScentFamily(${f.id},'${escHtml(f.name)}')" style="font-size:10px;padding:5px 12px;background:transparent;border-color:rgba(176,64,64,.3);color:var(--red)">Padam</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function openScentFamilyModal(fam = null) {
+  editingSFId = fam ? fam.id : null;
+  document.getElementById('sfm-title').textContent = fam ? 'Edit Keluarga' : 'Tambah Keluarga';
+  document.getElementById('sfm-id').value = fam?.id || '';
+  document.getElementById('sfm-name').value = fam?.name || '';
+  document.getElementById('sfm-slug').value = fam?.slug || '';
+  document.getElementById('sfm-genders').value = fam?.genders || 'mwu';
+  document.getElementById('sfm-href').value = fam?.href || '';
+  document.getElementById('sfm-order').value = fam?.sort_order || (scentFamiliesData.length + 1);
+  document.getElementById('sfm-active').checked = fam ? !!fam.active : true;
+  document.getElementById('sfm-image-url').value = fam?.image_url || '';
+  const preview = document.getElementById('sfm-img-preview');
+  if (fam?.image_url) { preview.src = fam.image_url; preview.style.display = 'block'; } else { preview.src=''; preview.style.display='none'; }
+  document.getElementById('scent-family-modal').classList.add('visible');
+}
+function closeScentFamilyModal() { document.getElementById('scent-family-modal').classList.remove('visible'); }
+
+function editScentFamily(id) {
+  const f = scentFamiliesData.find(x => x.id === id);
+  if (f) openScentFamilyModal(f);
+}
+
+async function handleSFMImageUpload(input) {
+  const file = input.files[0]; if (!file) return;
+  input.closest('.img-drop-zone').style.opacity = '.5';
+  try {
+    const url = await uploadImage(file);
+    document.getElementById('sfm-image-url').value = url;
+    const preview = document.getElementById('sfm-img-preview');
+    preview.src = url; preview.style.display = 'block';
+    toast('Gambar dimuat naik ✓');
+  } catch(e) { toast('Gagal muat naik', 'error'); }
+  finally { input.closest('.img-drop-zone').style.opacity = ''; }
+}
+
+async function saveScentFamily() {
+  const id = document.getElementById('sfm-id').value;
+  const data = {
+    name: document.getElementById('sfm-name').value.trim(),
+    slug: document.getElementById('sfm-slug').value.trim(),
+    genders: document.getElementById('sfm-genders').value.trim() || 'mwu',
+    href: document.getElementById('sfm-href').value.trim(),
+    sort_order: parseInt(document.getElementById('sfm-order').value) || 1,
+    active: document.getElementById('sfm-active').checked,
+    image_url: document.getElementById('sfm-image-url').value.trim(),
+  };
+  if (!data.name) { toast('Sila isi nama', 'error'); return; }
+  try {
+    if (id) { await sbPatch('scent_families', 'id=eq.' + id, data); toast('Keluarga dikemas kini ✓'); }
+    else { await sbPost('scent_families', data); toast('Keluarga ditambah ✓'); }
+    closeScentFamilyModal();
+    loadScentFamilies();
+  } catch(e) { toast('Gagal simpan', 'error'); console.error(e); }
+}
+
+async function toggleSFActive(id, active) {
+  try {
+    await sbPatch('scent_families', 'id=eq.' + id, { active });
+    const f = scentFamiliesData.find(x => x.id === id); if (f) f.active = active;
+    toast(active ? 'Diaktifkan' : 'Dimatikan');
+  } catch(e) { toast('Gagal', 'error'); }
+}
+
+async function deleteScentFamily(id, name) {
+  if (!confirm('Padam "' + name + '"?')) return;
+  try {
+    await sbDelete('scent_families', 'id=eq.' + id);
+    toast('Dipadam ✓');
+    loadScentFamilies();
+  } catch(e) { toast('Gagal padam', 'error'); }
 }
 
 <?php if ($loggedIn): ?>
