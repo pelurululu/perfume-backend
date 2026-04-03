@@ -3,6 +3,15 @@
  * THE ARTISAN PARFUM — callback.php (v2 + Supabase)
  * ToyyibPay posts here after payment
  */
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$allowed = ['https://www.theartisan.my', 'https://theartisan.my'];
+if (in_array($origin, $allowed)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+    header('Access-Control-Allow-Origin: https://www.theartisan.my');
+}
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
 
 define('LOG_FILE',  __DIR__ . '/payments.log');
 define('WA_NUMBER', '601159003985');
@@ -47,7 +56,9 @@ logPayment("CALLBACK | BillCode:{$billCode} | Ref:{$refNo} | Status:{$status} | 
 
 if ($status == '1') {
     logPayment("SUCCESS | {$billCode} | Ref:{$refNo} | RM{$amountRM}");
-    updateOrderInSupabase($billCode, 'paid', $refNo);
+    // Use billExternalReferenceNo which ToyyibPay sends back
+$orderRef = $_POST['billExternalReferenceNo'] ?? $_GET['billExternalReferenceNo'] ?? $billCode;
+updateOrderInSupabase($orderRef, 'paid', $refNo);
     http_response_code(200);
     echo 'OK';
 } elseif ($status == '2') {
