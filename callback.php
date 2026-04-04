@@ -79,7 +79,7 @@ function sendBrevoEmail(string $orderRef, string $refNo, string $amountRM): void
     $note    = $order['note']    ?? '—';
 
     $payload = [
-        'sender'      => ['name' => 'The Artisan Parfum', 'email' => 'jodohkuotp@gmail.com'],
+        'sender'      => ['name' => 'The Artisan Parfum', 'email' => 'meowersthe65@gmail.com'],
         'to'          => [['email' => YOUR_EMAIL, 'name' => 'Admin']],
         'subject'     => "💰 Bayaran Berjaya — {$orderRef} (RM{$amountRM})",
         'htmlContent' => "
