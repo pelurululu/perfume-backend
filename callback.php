@@ -10,7 +10,7 @@ define('WA_NUMBER', '601159003985');
 define('SB_URL',    'https://oyhtkqfmlwbkjbcfgqxm.supabase.co');
 define('SB_KEY',    getenv('SB_SERVICE_KEY'));
 define('BREVO_API_KEY', getenv('BREVO_API_KEY')); // or paste your key directly as a string
-define('YOUR_EMAIL',    'meowersthe65@gmail.com');
+define('YOUR_EMAIL',    'thartisanhouse.hq@gmail.com');
 
 function logPayment(string $msg): void {
     file_put_contents(LOG_FILE, '[' . date('Y-m-d H:i:s') . '] ' . $msg . "\n", FILE_APPEND | LOCK_EX);
