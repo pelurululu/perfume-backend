@@ -77,6 +77,7 @@ function sendBrevoEmail(string $orderRef, string $refNo, string $amountRM): void
     $address = $order['address'] ?? '—';
     $items   = $order['items']   ?? '—';
     $note    = $order['note']    ?? '—';
+    $total   = $order['total']   ?? $amountRM;
 
     $payload = [
         'sender'      => ['name' => 'The Artisan Parfum', 'email' => 'meowersthe65@gmail.com'],
@@ -89,7 +90,7 @@ function sendBrevoEmail(string $orderRef, string $refNo, string $amountRM): void
 
               <p><strong>Order Ref:</strong> {$orderRef}</p>
               <p><strong>Payment Ref:</strong> {$refNo}</p>
-              <p><strong>Jumlah:</strong> RM{$amountRM}</p>
+              <p><strong>Jumlah:</strong> RM{$total}</p>
 
               <hr style='border:1px solid #eee;margin:16px 0'>
               <h3 style='margin-bottom:8px'>Maklumat Pelanggan</h3>
