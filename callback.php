@@ -9,6 +9,8 @@ define('LOG_FILE',  __DIR__ . '/payments.log');
 define('WA_NUMBER', '601159003985');
 define('SB_URL',    'https://oyhtkqfmlwbkjbcfgqxm.supabase.co');
 define('SB_KEY',    getenv('SB_SERVICE_KEY'));
+define('BREVO_API_KEY', getenv('BREVO_API_KEY')); // or paste your key directly as a string
+define('YOUR_EMAIL',    'jodohkuotp@gmail.com');
 
 function logPayment(string $msg): void {
     file_put_contents(LOG_FILE, '[' . date('Y-m-d H:i:s') . '] ' . $msg . "\n", FILE_APPEND | LOCK_EX);
@@ -46,10 +48,42 @@ $amountRM = number_format((int)$amount / 100, 2);
 
 logPayment("CALLBACK | BillCode:{$billCode} | Ref:{$refNo} | Status:{$status} | Amount:RM{$amountRM}");
 
+function sendBrevoEmail(string $orderRef, string $refNo, string $amountRM): void {
+    $payload = [
+        'sender'     => ['name' => 'The Artisan Parfum', 'email' => 'noreply@theartisan.my'],
+        'to'         => [['email' => YOUR_EMAIL, 'name' => 'Admin']],
+        'subject'    => "💰 Bayaran Berjaya — {$orderRef} (RM{$amountRM})",
+        'htmlContent' => "
+            <h2>Bayaran Berjaya ✓</h2>
+            <p><strong>Order Ref:</strong> {$orderRef}</p>
+            <p><strong>Payment Ref:</strong> {$refNo}</p>
+            <p><strong>Jumlah:</strong> RM{$amountRM}</p>
+            <p>Log masuk ke <a href='https://www.theartisan.my/admin.php'>Admin Panel</a> untuk lihat butiran pesanan.</p>
+        "
+    ];
+
+    $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+    curl_setopt_array($ch, [
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode($payload),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 10,
+        CURLOPT_HTTPHEADER     => [
+            'api-key: ' . BREVO_API_KEY,
+            'Content-Type: application/json',
+            'Accept: application/json',
+        ]
+    ]);
+    $res = curl_exec($ch);
+    curl_close($ch);
+    logPayment("BREVO_EMAIL | OrderRef:{$orderRef} | Response:" . substr($res, 0, 100));
+}
+
 if ($status == '1') {
     logPayment("SUCCESS | {$billCode} | Ref:{$refNo} | RM{$amountRM}");
     // Use billExternalReferenceNo which ToyyibPay sends back
 updateOrderInSupabase($billCode, 'paid', $refNo);
+    sendBrevoEmail($billCode, $refNo, $amountRM);
     http_response_code(200);
     echo 'OK';
 } elseif ($status == '2') {
