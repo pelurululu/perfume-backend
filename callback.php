@@ -19,10 +19,9 @@ function logPayment(string $msg): void {
 function updateOrderInSupabase(string $orderRef, string $status, string $payRef): void {
     $sbKey = SB_KEY;
     if (!$sbKey || !$orderRef) return;
-
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL            => SB_URL . '/rest/v1/orders?order_ref=eq.' . urlencode($orderRef),
+        CURLOPT_URL            => SB_URL . '/rest/v1/orders?bill_code=eq.' . urlencode($orderRef), // ← fix this too
         CURLOPT_CUSTOMREQUEST  => 'PATCH',
         CURLOPT_POSTFIELDS     => json_encode(['pay_status' => $status, 'pay_ref' => $payRef]),
         CURLOPT_RETURNTRANSFER => true,
@@ -53,7 +52,7 @@ function getOrderFromSupabase(string $billCode): array {
     if (!$sbKey) return [];
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL            => SB_URL . '/rest/v1/orders?order_ref=eq.' . urlencode($billCode) . '&limit=1',
+        CURLOPT_URL            => SB_URL . '/rest/v1/orders?bill_code=eq.' . urlencode($billCode) . '&limit=1', // ← bill_code not order_ref
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT        => 10,
         CURLOPT_HTTPHEADER     => [
@@ -64,6 +63,7 @@ function getOrderFromSupabase(string $billCode): array {
     ]);
     $res = curl_exec($ch);
     curl_close($ch);
+    logPayment("SUPABASE_FETCH | BillCode:{$billCode} | Response:" . substr($res, 0, 200)); // ← add this to debug
     $data = json_decode($res, true);
     return $data[0] ?? [];
 }
