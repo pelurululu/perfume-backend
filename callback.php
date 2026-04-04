@@ -106,7 +106,7 @@ function sendBrevoEmail(string $orderRef, string $refNo, string $amountRM): void
               <p><strong>Nota:</strong> {$note}</p>
 
               <hr style='border:1px solid #eee;margin:16px 0'>
-              <a href='https://www.theartisan.my/admin.php' 
+              <a href='https://perfume-backend-9653.onrender.com/admin.php' 
                 style='background:#111;color:#fff;padding:10px 20px;text-decoration:none;font-size:13px'>
                 Buka Admin Panel →
               </a>
