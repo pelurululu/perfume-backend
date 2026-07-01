@@ -18,7 +18,7 @@ define('TP_SANDBOX',       false);
 define('STORE_NAME',       'The Artisan Parfum');
 define('STORE_EMAIL',      'info@theartisanparfum.my');
 define('WA_NUMBER',        '601159003985');
-define('BASE_URL',         'https://www.theartisan.my');
+define('BASE_URL',         'https://perfumev2.onrender.com/');
 define('BACKEND_URL',      'https://perfume-backend-9653.onrender.com');
 define('MIN_ORDER_RM',     1);
 
